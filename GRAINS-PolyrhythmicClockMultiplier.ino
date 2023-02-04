@@ -1,3 +1,15 @@
+/*****
+ * The original code is written by timothyjackman for the wonkystuff core1.æ module
+ * https://forum.aemodular.com/thread/2484/polyrhythmic-clock-multiplier
+ * 
+ * Changes:
+ * Instead of pin 0 and pin 1 this code uses pin 8 and pin 11.
+ * Please refer to https://wiki.aemodular.com/pmwiki.php/AeManual/GRAINS
+ * 
+ * below is the original comment from timothyjackman
+ ****/
+
+
 //polyrhythmic clock multiplier
 //
 //                    guide
@@ -34,17 +46,20 @@
 //tested on core1.æ v1.1
 //thanks wonkystuff for this awesome module ;)
 
-
+int INPUT_A0 = A0;
+int INPUT_A1 = A1;
+int INPUT_A2 = A2;
+int INPUT_A3 = A3;
 
 void
 setup(void)
 {
-  pinMode(A0, INPUT); //A
-  pinMode(A1, INPUT); //B
-  pinMode(A3, INPUT); //C
-  pinMode(A2, INPUT); //D
-  pinMode(0, OUTPUT); //M(C)
-  pinMode(1, OUTPUT); //S(C)
+  pinMode(INPUT_A0, INPUT); //A
+  pinMode(INPUT_A1, INPUT); //B
+  pinMode(INPUT_A3, INPUT); //C
+  pinMode(INPUT_A2, INPUT); //D
+  pinMode(11, OUTPUT); // OUT (set switch to Grains mode ("G"))
+  pinMode(8, OUTPUT); // D
 }
 
 boolean gate = false;
@@ -64,7 +79,7 @@ int poly0 = 1;
 
 void loop() {
 
-  gate = analogRead(A1) > 700;
+  gate = analogRead(INPUT_A1) > 700;
   if (gate != oldgate) { //only trigger on change
     if (gate) { 
       totaltime = (timer + prevtimer) / 2; //average of latest beat time in ticks and previous beat time 
@@ -76,7 +91,7 @@ void loop() {
       beatone = true; //ensure both fire on beat one. wasn't doing this sometimes. i could debug or just do this
       
     } else {
-      if (analogRead(A1) > 100) { //while b is the clock input, that doesn't stop us hiding some analogue
+      if (analogRead(INPUT_A1) > 100) { //while b is the clock input, that doesn't stop us hiding some analogue
                                   //in that binary. 100 is just below west
         combo = true; //enable combo mode
       } else {
@@ -86,31 +101,31 @@ void loop() {
 
     oldgate = gate;
   }
-  poly1 = (analogRead(A3) >> 6) + 1; //read c and
-  poly0 = (analogRead(A2) >> 6) + 1; //d respectively, convert them to a value from 1-16 inclusive
+  poly1 = (analogRead(INPUT_A3) >> 6) + 1; //read c and
+  poly0 = (analogRead(INPUT_A2) >> 6) + 1; //d respectively, convert them to a value from 1-16 inclusive
   
   if (timer%(totaltime/poly1) == 0 || beatone) { //the equation here checks if the current tick is
                                                  //a multiple of the beat time, devided by the 
                                                  //desired polyrhythm. also always if beat one
-    digitalWrite(1, HIGH);
-    pulsewidthstop1 = timer + ((analogRead(A0)-586) << 3); //calculate when the pulse should end
-                                                           //based on A
+    digitalWrite(8, HIGH);
+    pulsewidthstop1 = timer + ((analogRead(INPUT_A0)-586) << 3); //calculate when the pulse should end
+                                                                 //based on A
   }
   if (timer%(totaltime/poly0) == 0 || beatone) { //see above. this is for the secondary output
-    digitalWrite(0, HIGH);
+    digitalWrite(11, HIGH);
     if (combo) {
-      digitalWrite(1, HIGH); //combo mode
+      digitalWrite(8, HIGH); //combo mode
     }
-    pulsewidthstop0 = timer + ((analogRead(A0)-586) << 3); //see above. for secondary output
+    pulsewidthstop0 = timer + ((analogRead(INPUT_A0)-586) << 3); //see above. for secondary output
     
   }
   if (timer == pulsewidthstop1) { //end pulse
-    digitalWrite(1, LOW);
+    digitalWrite(8, LOW);
   }
   if (timer == pulsewidthstop0) { //end pulse
-    digitalWrite(0, LOW);
+    digitalWrite(11, LOW);
     if (combo) {
-      digitalWrite(1, LOW); //combo mode
+      digitalWrite(8, LOW); //combo mode
     }
   }
 
