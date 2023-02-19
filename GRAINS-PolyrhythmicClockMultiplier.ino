@@ -9,7 +9,6 @@
  * below is the original comment from timothyjackman
  ****/
 
-
 //polyrhythmic clock multiplier
 //
 //                    guide
@@ -45,28 +44,31 @@
 //written by timothyjackman referencing the core1 examples
 //tested on core1.æ v1.1
 //thanks wonkystuff for this awesome module ;)
+/* End of original comment from timothyjackman */
 
-int INPUT_A0 = A0;
-int INPUT_A1 = A1;
-int INPUT_A2 = A2;
-int INPUT_A3 = A3;
+//int PULSEWIDTH_INPUT = A0;
+int POLY0_INPUT = A2;
+int POLY1_INPUT = A1;
+int GATE_INPUT = A4;
+int OUTPUT1 = 11;
+int OUTPUT2 = 8;
 
-void
-setup(void)
-{
-  pinMode(INPUT_A0, INPUT); //A
-  pinMode(INPUT_A1, INPUT); //B
-  pinMode(INPUT_A3, INPUT); //C
-  pinMode(INPUT_A2, INPUT); //D
-  pinMode(11, OUTPUT); // OUT (set switch to Grains mode ("G"))
-  pinMode(8, OUTPUT); // D
+void setup(void) {
+  Serial.begin(115200);
+
+  //pinMode(PULSEWIDTH_INPUT, INPUT);
+  pinMode(POLY0_INPUT, INPUT);
+  pinMode(POLY1_INPUT, INPUT);
+  pinMode(GATE_INPUT, INPUT);
+  pinMode(OUTPUT1, OUTPUT); // OUT (set switch to Grains mode ("G"))
+  pinMode(OUTPUT2, OUTPUT); // D
+
+  Serial.println("GRAINS-PolyrhythmicClockMultiplier");
 }
 
 boolean gate = false;
 boolean oldgate = false;
 boolean beatone = false;
-boolean combo = false;
-boolean count = false;
 
 uint64_t totaltime = 100;
 uint64_t timer = 0;
@@ -78,10 +80,14 @@ int poly1 = 1;
 int poly0 = 1;
 
 void loop() {
-
-  gate = analogRead(INPUT_A1) > 700;
+  gate = analogRead(GATE_INPUT) > 700;
   if (gate != oldgate) { //only trigger on change
-    if (gate) { 
+    if (gate) {
+      Serial.print("new trigger - ");
+      char sbuf[50];
+      sprintf(sbuf, "%ld", timer);
+      Serial.print("timer: "); Serial.println(sbuf);
+
       totaltime = (timer + prevtimer) / 2; //average of latest beat time in ticks and previous beat time 
                                            //(ran into issues with slight fluctuations, this makes them
                                            //less notable in a very botched way. probably a proper solution
@@ -90,43 +96,42 @@ void loop() {
       timer = 0; //reset timer
       beatone = true; //ensure both fire on beat one. wasn't doing this sometimes. i could debug or just do this
       
-    } else {
-      if (analogRead(INPUT_A1) > 100) { //while b is the clock input, that doesn't stop us hiding some analogue
-                                  //in that binary. 100 is just below west
-        combo = true; //enable combo mode
-      } else {
-        combo = false;
-      }
     }
 
     oldgate = gate;
   }
-  poly1 = (analogRead(INPUT_A3) >> 6) + 1; //read c and
-  poly0 = (analogRead(INPUT_A2) >> 6) + 1; //d respectively, convert them to a value from 1-16 inclusive
+
+  poly1 = (analogRead(POLY1_INPUT) >> 6) + 1; //read A1 and
+  poly0 = (analogRead(POLY0_INPUT) >> 6) + 1; //A2 respectively, convert them to a value from 1-16 inclusive
   
   if (timer%(totaltime/poly1) == 0 || beatone) { //the equation here checks if the current tick is
                                                  //a multiple of the beat time, devided by the 
                                                  //desired polyrhythm. also always if beat one
-    digitalWrite(8, HIGH);
-    pulsewidthstop1 = timer + ((analogRead(INPUT_A0)-586) << 3); //calculate when the pulse should end
-                                                                 //based on A
+    digitalWrite(OUTPUT2, HIGH);
+    Serial.print("OUTPUT2 HIGH - poly1=");
+    Serial.println(poly1);
+
+    //pulsewidthstop1 = timer + ((analogRead(PULSEWIDTH_INPUT)-586) << 3); //calculate when the pulse should end based on A0
+    pulsewidthstop1 = timer + 100;
   }
+
   if (timer%(totaltime/poly0) == 0 || beatone) { //see above. this is for the secondary output
-    digitalWrite(11, HIGH);
-    if (combo) {
-      digitalWrite(8, HIGH); //combo mode
-    }
-    pulsewidthstop0 = timer + ((analogRead(INPUT_A0)-586) << 3); //see above. for secondary output
-    
+    digitalWrite(OUTPUT1, HIGH);
+    Serial.print("OUTPUT1 HIGH - poly0=");
+    Serial.println(poly0);
+
+    //pulsewidthstop0 = timer + ((analogRead(PULSEWIDTH_INPUT)-586) << 3); //see above. for secondary output
+    pulsewidthstop0 = timer + 100;
   }
+
   if (timer == pulsewidthstop1) { //end pulse
-    digitalWrite(8, LOW);
+    Serial.println("timer == pulsewidthstop1 - OUTPUT2 LOW");
+    digitalWrite(OUTPUT2, LOW);
   }
+
   if (timer == pulsewidthstop0) { //end pulse
-    digitalWrite(11, LOW);
-    if (combo) {
-      digitalWrite(8, LOW); //combo mode
-    }
+    Serial.println("timer == pulsewidthstop0 - OUTPUT1 LOW");
+    digitalWrite(OUTPUT1, LOW);
   }
 
   beatone = false;
