@@ -54,16 +54,12 @@ int OUTPUT1 = 11;
 int OUTPUT2 = 8;
 
 void setup(void) {
-  Serial.begin(115200);
-
   //pinMode(PULSEWIDTH_INPUT, INPUT);
   pinMode(POLY0_INPUT, INPUT);
   pinMode(POLY1_INPUT, INPUT);
   pinMode(GATE_INPUT, INPUT);
   pinMode(OUTPUT1, OUTPUT); // OUT (set switch to Grains mode ("G"))
   pinMode(OUTPUT2, OUTPUT); // D
-
-  Serial.println("GRAINS-PolyrhythmicClockMultiplier");
 }
 
 boolean gate = false;
@@ -83,11 +79,6 @@ void loop() {
   gate = analogRead(GATE_INPUT) > 700;
   if (gate != oldgate) { //only trigger on change
     if (gate) {
-      Serial.print("new trigger - ");
-      char sbuf[50];
-      sprintf(sbuf, "%ld", timer);
-      Serial.print("timer: "); Serial.println(sbuf);
-
       totaltime = (timer + prevtimer) / 2; //average of latest beat time in ticks and previous beat time 
                                            //(ran into issues with slight fluctuations, this makes them
                                            //less notable in a very botched way. probably a proper solution
@@ -108,8 +99,6 @@ void loop() {
                                                  //a multiple of the beat time, devided by the 
                                                  //desired polyrhythm. also always if beat one
     digitalWrite(OUTPUT2, HIGH);
-    Serial.print("OUTPUT2 HIGH - poly1=");
-    Serial.println(poly1);
 
     //pulsewidthstop1 = timer + ((analogRead(PULSEWIDTH_INPUT)-586) << 3); //calculate when the pulse should end based on A0
     pulsewidthstop1 = timer + 100;
@@ -117,20 +106,16 @@ void loop() {
 
   if (timer%(totaltime/poly0) == 0 || beatone) { //see above. this is for the secondary output
     digitalWrite(OUTPUT1, HIGH);
-    Serial.print("OUTPUT1 HIGH - poly0=");
-    Serial.println(poly0);
 
     //pulsewidthstop0 = timer + ((analogRead(PULSEWIDTH_INPUT)-586) << 3); //see above. for secondary output
     pulsewidthstop0 = timer + 100;
   }
 
   if (timer == pulsewidthstop1) { //end pulse
-    Serial.println("timer == pulsewidthstop1 - OUTPUT2 LOW");
     digitalWrite(OUTPUT2, LOW);
   }
 
   if (timer == pulsewidthstop0) { //end pulse
-    Serial.println("timer == pulsewidthstop0 - OUTPUT1 LOW");
     digitalWrite(OUTPUT1, LOW);
   }
 
